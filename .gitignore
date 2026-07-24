@@ -8,3 +8,5 @@ node_modules/
 *.pdb
 
 JBP/appsettings.Development.json
+.sonarqube/
+**/.sonarqube/
