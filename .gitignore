@@ -1,11 +1,1 @@
-.vs/
-bin/
-obj/
-node_modules/
-*.user
-*.suo
-*.cache
-*.pdb
-JBP/appsettings.json
-.sonarqube/
-**/.sonarqube/
+vistajobs
