@@ -1,8 +1,10 @@
-.vs/ 
+.vs/
 bin/
 obj/
 node_modules/
 *.user
 *.suo
 *.cache
-*.pdbJBP/appsettings.json
+*.pdb
+
+JBP/appsettings.Development.json
