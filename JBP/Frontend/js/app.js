@@ -3962,3 +3962,115 @@ function toggleEmploymentHistory() {
     }
 }
 
+// Admin control centre: each card opens a focused, manageable directory.
+let adminRecords = { users: [], candidates: [], employers: [] };
+let adminDashboard = {};
+
+function adminHeaders() {
+    return { "Content-Type": "application/json", Authorization: `Bearer ${authStorage.getItem("token")}` };
+}
+
+function escapeAdminHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[character]));
+}
+
+async function loadAdminDashboard() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/Admin/dashboard`, { headers: adminHeaders() });
+        if (!response.ok) throw new Error("Dashboard request failed");
+        adminDashboard = await response.json();
+        document.getElementById("admin-users-count").innerText = adminDashboard.totalUsers;
+        document.getElementById("admin-candidates-count").innerText = adminDashboard.totalCandidates;
+        document.getElementById("admin-employers-count").innerText = adminDashboard.totalEmployers;
+        showAdminView("overview");
+    } catch (error) {
+        console.error(error); showToast("Failed to load admin dashboard", "error");
+    }
+}
+
+async function showAdminView(view) {
+    const title = document.getElementById("admin-view-title");
+    const kicker = document.getElementById("admin-view-kicker");
+    const back = document.getElementById("admin-back-button");
+    const content = document.getElementById("admin-view-content");
+    if (!title || !content) return;
+    back.hidden = view === "overview";
+    if (view === "overview") { kicker.innerText = "DIRECTORY"; title.innerText = "Select a section"; content.innerHTML = '<div class="admin-empty">Select a dashboard card to manage records.</div>'; return; }
+    if (view === "candidates") {
+        kicker.innerText = "CANDIDATE REGISTRATIONS"; title.innerText = "Choose candidate type";
+        content.innerHTML = `<div class="admin-category-grid"><button class="admin-category-card" onclick="showAdminView('freshers')"><strong>Freshers</strong><span>${adminDashboard.totalFreshers || 0} submitted profiles</span></button><button class="admin-category-card" onclick="showAdminView('experienced')"><strong>Experienced</strong><span>${adminDashboard.totalExperienced || 0} submitted profiles</span></button></div>`;
+        return;
+    }
+    const configurations = { users: ["REGISTERED USERS", "All registered users", "users"], freshers: ["CANDIDATE REGISTRATIONS", "Fresher profiles", "candidates?type=fresher"], experienced: ["CANDIDATE REGISTRATIONS", "Experienced profiles", "candidates?type=experienced"], employers: ["EMPLOYER DIRECTORY", "Registered employers", "employers"] };
+    const configuration = configurations[view]; if (!configuration) return;
+    kicker.innerText = configuration[0]; title.innerText = configuration[1]; content.innerHTML = '<div class="admin-empty">Loading records…</div>';
+    try {
+        const response = await fetch(`${API_BASE_URL}/Admin/${configuration[2]}`, { headers: adminHeaders() });
+        if (!response.ok) throw new Error("Directory request failed");
+        const records = await response.json();
+        const type = view === "freshers" || view === "experienced" ? "candidates" : view;
+        adminRecords[type] = records;
+        renderAdminTable(type, records);
+    } catch (error) { console.error(error); content.innerHTML = '<div class="admin-empty">Unable to load records.</div>'; }
+}
+
+function renderAdminTable(type, records) {
+    const content = document.getElementById("admin-view-content");
+    if (!records.length) { content.innerHTML = '<div class="admin-empty">No records found in this section.</div>'; return; }
+    const rows = records.map(record => {
+        if (type === "users") return `<tr><td><strong>${escapeAdminHtml(record.fullName)}</strong><small>${escapeAdminHtml(record.email)}</small></td><td><span class="admin-role">${escapeAdminHtml(record.role)}</span></td>${adminActionCells(type, record.id)}</tr>`;
+        if (type === "candidates") return `<tr><td><strong>${escapeAdminHtml(record.fullName)}</strong><small>${escapeAdminHtml(record.email)}</small></td><td>${escapeAdminHtml(record.phone || "—")}</td><td>${escapeAdminHtml(record.location || "—")}</td><td><span class="admin-role">${escapeAdminHtml(record.candidateType)}</span></td>${adminActionCells(type, record.id)}</tr>`;
+        return `<tr><td><strong>${escapeAdminHtml(record.companyName)}</strong><small>${escapeAdminHtml(record.officialEmail)}</small></td><td>${escapeAdminHtml(record.contactName || "—")}</td><td>${escapeAdminHtml(record.website || "—")}</td>${adminActionCells(type, record.id)}</tr>`;
+    }).join("");
+    const heads = type === "users" ? "<th>User</th><th>Role</th>" : type === "candidates" ? "<th>Candidate</th><th>Phone</th><th>Location</th><th>Type</th>" : "<th>Company</th><th>Contact person</th><th>Website</th>";
+    content.innerHTML = `<div class="admin-table-wrap"><table class="admin-table"><thead><tr>${heads}<th>Management</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function adminActionCells(type, id) { return `<td class="admin-actions"><button class="admin-edit" onclick="editAdminRecord('${type}', ${id})">Edit</button><button class="admin-delete" onclick="deleteAdminRecord('${type}', ${id})">Delete</button></td>`; }
+
+function adminFormField(label, name, value = "", inputType = "text", options = "") {
+    if (inputType === "select") return `<label class="admin-form-field"><span>${label}</span><select name="${name}">${options}</select></label>`;
+    if (inputType === "checkbox") return `<label class="admin-check-field"><input type="checkbox" name="${name}" ${value ? "checked" : ""}><span>${label}</span></label>`;
+    if (inputType === "textarea") return `<label class="admin-form-field admin-form-full"><span>${label}</span><textarea name="${name}" rows="4">${escapeAdminHtml(value)}</textarea></label>`;
+    return `<label class="admin-form-field"><span>${label}</span><input type="${inputType}" name="${name}" value="${escapeAdminHtml(value)}"></label>`;
+}
+
+function adminSelectOptions(values, selected) { return values.map(value => `<option value="${value}" ${value === selected ? "selected" : ""}>${value.charAt(0).toUpperCase() + value.slice(1)}</option>`).join(""); }
+
+function editAdminRecord(type, id) {
+    const record = adminRecords[type].find(item => item.id === id); if (!record) return;
+    const content = document.getElementById("admin-view-content");
+    document.getElementById("admin-view-kicker").innerText = "RECORD MANAGEMENT";
+    document.getElementById("admin-view-title").innerText = `Edit ${type === "users" ? "user" : type === "candidates" ? "candidate profile" : "employer profile"}`;
+    let fields = "";
+    if (type === "users") {
+        fields = adminFormField("Full name", "fullName", record.fullName) + adminFormField("Email address", "email", record.email, "email") + adminFormField("Account role", "role", "", "select", adminSelectOptions(["jobseeker", "employer", "admin"], record.role));
+    } else if (type === "candidates") {
+        fields = adminFormField("Full name", "fullName", record.fullName) + adminFormField("Email address", "email", record.email, "email") + adminFormField("Phone number", "phone", record.phone) + adminFormField("Date of birth", "dob", record.dob ? String(record.dob).slice(0, 10) : "", "date") + adminFormField("Candidate type", "candidateType", "", "select", adminSelectOptions(["fresher", "experienced"], record.candidateType)) + adminFormField("Experience (years)", "experience", record.experience, "number") + adminFormField("Location", "location", record.location) + adminFormField("Expected salary", "salary", record.salary) + adminFormField("Skills", "skills", record.skills, "textarea") + adminFormField("Employment history", "employmentHistory", record.employmentHistory, "textarea") + adminFormField("Resume path", "resumePath", record.resumePath) + `<div class="admin-verification-group"><p>Verification status</p>${adminFormField("Aadhaar verified", "aadhaarVerified", record.aadhaarVerified, "checkbox")}${adminFormField("PAN verified", "panVerified", record.panVerified, "checkbox")}${adminFormField("UAN verified", "uanVerified", record.uanVerified, "checkbox")}</div>`;
+    } else {
+        fields = adminFormField("Company name", "companyName", record.companyName) + adminFormField("Official email", "officialEmail", record.officialEmail, "email") + adminFormField("GST number", "gstNumber", record.gstNumber) + adminFormField("CIN number", "cinNumber", record.cinNumber) + adminFormField("Website", "website", record.website, "url");
+    }
+    content.innerHTML = `<form class="admin-edit-form" onsubmit="saveAdminRecord(event, '${type}', ${id})"><div class="admin-edit-intro"><strong>Update record details</strong><span>Review the information and save your changes when ready.</span></div><div class="admin-form-grid">${fields}</div><div class="admin-form-actions"><button type="button" class="admin-cancel-button" onclick="showAdminView('${type === "candidates" ? (record.candidateType === "fresher" ? "freshers" : "experienced") : type}')">Cancel</button><button type="submit" class="admin-save-button">Save Changes</button></div></form>`;
+}
+
+async function saveAdminRecord(event, type, id) {
+    event.preventDefault();
+    const record = adminRecords[type].find(item => item.id === id); if (!record) return;
+    const formData = new FormData(event.currentTarget); const update = { ...record };
+    formData.forEach((value, key) => { update[key] = value; });
+    if (type === "candidates") { update.experience = Number(update.experience) || 0; update.aadhaarVerified = formData.has("aadhaarVerified"); update.panVerified = formData.has("panVerified"); update.uanVerified = formData.has("uanVerified"); update.dob = update.dob || null; }
+    const saveButton = event.currentTarget.querySelector("button[type='submit']"); saveButton.disabled = true; saveButton.innerText = "Saving…";
+    try {
+        const response = await fetch(`${API_BASE_URL}/Admin/${type}/${id}`, { method: "PUT", headers: adminHeaders(), body: JSON.stringify(update) });
+        if (!response.ok) throw new Error("Update failed");
+        showToast("Details updated successfully", "success"); await loadAdminDashboard(); showAdminView(type === "candidates" ? (update.candidateType === "fresher" ? "freshers" : "experienced") : type);
+    } catch (error) { console.error(error); showToast("Unable to save changes", "error"); saveButton.disabled = false; saveButton.innerText = "Save Changes"; }
+}
+
+async function deleteAdminRecord(type, id) {
+    if (!confirm("Delete this record permanently?")) return;
+    const response = await fetch(`${API_BASE_URL}/Admin/${type}/${id}`, { method: "DELETE", headers: adminHeaders() });
+    if (!response.ok) { showToast("Unable to delete this record", "error"); return; }
+    showToast("Record deleted", "success"); await loadAdminDashboard(); showAdminView(type);
+}
+

@@ -475,93 +475,17 @@
 
     <div id="page-admin" class="page">
 
-        <div class="dashboard-section">
-
-            <h2>Admin Dashboard</h2>
-
-            <!-- ANALYTICS -->
+        <div class="dashboard-section admin-dashboard">
+            <div class="admin-heading"><div><p class="admin-eyebrow">CONTROL CENTRE</p><h2>Admin Dashboard</h2><p>Manage VistaJobs accounts and candidate registrations.</p></div></div>
             <div class="admin-stats">
-
-                <div class="dashboard-card">
-
-                    <h3>Total Users</h3>
-
-                    <div id="admin-users-count">
-
-                        0
-
-                    </div>
-                </div>
-
-                <div class="dashboard-card">
-
-                    <h3>Total Jobs</h3>
-
-                    <div id="admin-jobs-count">
-
-                        0
-
-                    </div>
-                </div>
-
-                <div class="dashboard-card">
-
-                    <h3>Total Applications</h3>
-
-                    <div id="admin-applications-count">
-
-                        0
-
-                    </div>
-                </div>
-
-                <div class="dashboard-card">
-
-                    <h3>Total Candidates</h3>
-
-                    <div id="admin-candidates-count">
-
-                        0
-
-                    </div>
-                </div>
+                <button class="admin-stat-card" onclick="showAdminView('users')"><span class="admin-stat-icon">Users</span><span class="admin-stat-label">Total Users</span><strong id="admin-users-count">0</strong><small>View all registered users →</small></button>
+                <button class="admin-stat-card" onclick="showAdminView('candidates')"><span class="admin-stat-icon">Profiles</span><span class="admin-stat-label">Registered Candidates</span><strong id="admin-candidates-count">0</strong><small>View fresher & experienced profiles →</small></button>
+                <button class="admin-stat-card" onclick="showAdminView('employers')"><span class="admin-stat-icon">Employers</span><span class="admin-stat-label">Total Employers</span><strong id="admin-employers-count">0</strong><small>View verified employer accounts →</small></button>
             </div>
-
-            <!-- USERS -->
-            <div class="dashboard-card">
-
-                <h3>Users</h3>
-
-                <div id="admin-users-list">
-
-                    Loading...
-
-                </div>
-            </div>
-
-            <!-- JOBS -->
-            <div class="dashboard-card">
-
-                <h3>Jobs</h3>
-
-                <div id="admin-jobs-list">
-
-                    Loading...
-
-                </div>
-            </div>
-
-            <!-- APPLICATIONS -->
-            <div class="dashboard-card">
-
-                <h3>Applications</h3>
-
-                <div id="admin-applications-list">
-
-                    Loading...
-
-                </div>
-            </div>
+            <section class="admin-management">
+                <div class="admin-panel-header"><div><p id="admin-view-kicker" class="admin-eyebrow">DIRECTORY</p><h3 id="admin-view-title">Select a section</h3></div><button id="admin-back-button" class="admin-back-button" onclick="showAdminView('overview')" hidden>← Back to overview</button></div>
+                <div id="admin-view-content"><div class="admin-empty">Select a dashboard card to manage records.</div></div>
+            </section>
         </div>
     </div>
     <!-- ═══════════════════════════════════════
