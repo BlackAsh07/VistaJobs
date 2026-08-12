@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "P0+4mTffVN+OGe3LtW/wr4RQcEmnXGKZBylQuWUxOlE=",
+  "Source": "VistaJobsApi",
+  "BasePath": "_content/VistaJobsApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
